@@ -1,9 +1,11 @@
+using Application.Common.Interfaces;
 using Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Database
 {
-    public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+    public class AppDbContext(DbContextOptions<AppDbContext> options)
+        : DbContext(options), IApplicationDbContext
     {
         public DbSet<Restaurant> Restaurants => Set<Restaurant>();
         public DbSet<Table> Tables => Set<Table>();
