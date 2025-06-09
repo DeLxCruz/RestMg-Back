@@ -1,4 +1,6 @@
+using API.Services;
 using Application;
+using Application.Common.Interfaces;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,8 @@ builder.Services
     .AddInfrastructureServices(builder.Configuration);
 
 // -- Servicios propios de la capa de API --
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

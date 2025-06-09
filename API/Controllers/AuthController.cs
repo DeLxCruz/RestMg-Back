@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using API.DTOs;
 using Application.Features.Auth.Commands.Login;
+using Application.Features.Auth.Commands.RefreshToken;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -24,9 +26,22 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                // En un caso real, podrías tener excepciones personalizadas
-                // para devolver 401 Unauthorized o 400 Bad Request.
                 return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("refresh")]
+        [Authorize]
+        public async Task<IActionResult> RefreshToken()
+        {
+            try
+            {
+                var result = await mediator.Send(new RefreshTokenCommand());
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized();
             }
         }
     }
