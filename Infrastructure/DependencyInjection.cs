@@ -1,6 +1,7 @@
 using Application.Common.Interfaces;
 using Infrastructure.Auth;
 using Infrastructure.Database;
+using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,12 @@ namespace Infrastructure
                     ValidAudience = jwtSettings["Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
                 });
+
+            // Registrar el servicio de almacenamiento de archivos
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+            // Registrar el generador de códigos QR
+            services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
 
             return services;
         }

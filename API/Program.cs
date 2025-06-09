@@ -34,6 +34,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles(); // Permite servir archivos estáticos, como imágenes y documentos
+
 app.UseAuthentication();
 app.UseAuthorization();
 

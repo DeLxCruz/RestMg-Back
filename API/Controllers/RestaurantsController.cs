@@ -1,6 +1,9 @@
 using API.DTOs;
 using Application.Features.Restaurants.Commands.Onboard;
+using Application.Features.Restaurants.Commands.UpdateMyRestaurant;
+using Application.Features.Restaurants.Queries.GetMyRestaurant;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -33,6 +36,24 @@ namespace API.Controllers
                 // Si el handler lanza una excepción, se captura y se devuelve un 400 Bad Request
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyRestaurant()
+        {
+            var query = new GetMyRestaurantQuery();
+            var restaurant = await mediator.Send(query);
+            return Ok(restaurant);
+        }
+
+        [HttpPut("me")]
+        [Authorize(Roles = "Admin")] // Solo el Admin puede editar los datos
+        public async Task<IActionResult> UpdateMyRestaurant([FromBody] UpdateRestaurantRequest request)
+        {
+            var command = new UpdateMyRestaurantCommand(request.Name, request.BrandingColor, request.LogoUrl);
+            await mediator.Send(command);
+            return NoContent();
         }
     }
 }
