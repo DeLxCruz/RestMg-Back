@@ -6,6 +6,7 @@ namespace Domain.Models
         public string Name { get; set; } = null!;
         public string? BrandingColor { get; set; }
         public string? LogoUrl { get; set; }
+        public string? ClientUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<Table> Tables { get; set; } = new List<Table>();

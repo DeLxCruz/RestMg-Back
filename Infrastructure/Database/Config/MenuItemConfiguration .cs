@@ -15,6 +15,14 @@ namespace Infrastructure.Database.Config
             b.HasOne(m => m.Category)
               .WithMany(c => c.Items)
               .HasForeignKey(m => m.CategoryId);
+
+            b.HasOne(m => m.Restaurant)
+               .WithMany()
+               .HasForeignKey(m => m.RestaurantId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+            b.Property(m => m.IsActive)
+                .HasDefaultValue(true);
         }
     }
 }

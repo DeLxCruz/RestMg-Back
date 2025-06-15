@@ -14,6 +14,9 @@ namespace Infrastructure.Database.Config
             b.HasOne(c => c.Restaurant)
               .WithMany(r => r.Categories)
               .HasForeignKey(c => c.RestaurantId);
+
+            b.Property(c => c.IsActive)
+            .HasDefaultValue(true);
         }
     }
 }

@@ -18,17 +18,21 @@ namespace Application.Features.Tables.Queries.GetTableQrCode
                 ?? throw new UnauthorizedAccessException("Restaurante no identificado.");
 
             var table = await dbContext.Tables
-                .AsNoTracking()
+                .Include(t => t.Restaurant)
                 .FirstOrDefaultAsync(t => t.Id == request.TableId && t.RestaurantId == restaurantId, ct)
                 ?? throw new KeyNotFoundException("Mesa no encontrada o no pertenece a su restaurante.");
 
-            // Construir la URL que se codificará en el QR
-            var clientUrl = configuration["ClientAppSettings:ClientUrl"]
-                ?? throw new InvalidOperationException("La URL del cliente no está configurada.");
+            // Determinar la URL base del cliente
+            var clientUrlBase = table.Restaurant.ClientUrl;
 
-            var urlToEncode = $"{clientUrl}/menu/{table.Code}";
+            if (string.IsNullOrWhiteSpace(clientUrlBase))
+            {
+                clientUrlBase = configuration["ClientAppSettings:ClientUrl"]
+                    ?? throw new InvalidOperationException("No se ha configurado una URL de cliente por defecto.");
+            }
 
-            // Generar el QR usando el servicio
+            var urlToEncode = $"{clientUrlBase}/menu/{table.Code}";
+
             var qrCodeBytes = qrCodeGenerator.Generate(urlToEncode);
 
             return qrCodeBytes;

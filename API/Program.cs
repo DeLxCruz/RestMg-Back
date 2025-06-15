@@ -23,6 +23,9 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// -- Hubs --
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -36,9 +39,12 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles(); // Permite servir archivos estáticos, como imágenes y documentos
 
+app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<API.Hubs.KitchenHub>("/kitchenHub"); // Mapea el hub de SignalR
 
 app.Run();
