@@ -42,7 +42,7 @@ namespace API.Controllers
         {
             try
             {
-                var command = new UpdateTableCommand(id, request.Code, request.IsActive);
+                var command = new UpdateTableCommand(id, request.Code, request.Status);
                 await mediator.Send(command);
                 return NoContent();
             }

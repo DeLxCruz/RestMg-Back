@@ -27,6 +27,9 @@ namespace Infrastructure.Database.Config
         .WithMany(r => r.Orders)
         .HasForeignKey(o => o.RestaurantId)
         .OnDelete(DeleteBehavior.Restrict);
+
+      b.Property(o => o.OrderCode).IsRequired().HasMaxLength(10);
+      b.HasIndex(o => new { o.RestaurantId, o.OrderCode }).IsUnique();
     }
   }
 }

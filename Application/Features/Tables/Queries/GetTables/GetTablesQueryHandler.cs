@@ -16,8 +16,8 @@ namespace Application.Features.Tables.Queries.GetTables
             var tables = await dbContext.Tables
                 .AsNoTracking()
                 .Where(t => t.RestaurantId == restaurantId)
-                .Select(t => new TableDto(t.Id, t.Code, t.IsActive))
                 .OrderBy(t => t.Code)
+                .Select(t => new TableDto(t.Id, t.Code, t.Status.ToString()))
                 .ToListAsync(ct);
 
             return tables;

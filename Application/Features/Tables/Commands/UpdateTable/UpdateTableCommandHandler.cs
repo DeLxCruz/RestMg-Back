@@ -34,7 +34,7 @@ namespace Application.Features.Tables.Commands.UpdateTable
             }
 
             table.Code = command.Code;
-            table.IsActive = command.IsActive;
+            table.Status = command.Status;
 
             await dbContext.SaveChangesAsync(ct);
         }

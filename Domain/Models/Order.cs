@@ -5,6 +5,7 @@ namespace Domain.Models
     public class Order
     {
         public Guid Id { get; set; }
+        public string OrderCode { get; set; } = null!;
         public Guid RestaurantId { get; set; }
         public Restaurant Restaurant { get; set; } = null!;
         public Guid TableId { get; set; }
