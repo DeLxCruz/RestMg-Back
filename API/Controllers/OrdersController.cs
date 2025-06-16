@@ -15,7 +15,8 @@ namespace API.Controllers
             try
             {
                 var result = await mediator.Send(command);
-                return CreatedAtAction(nameof(GetOrderByCode), new { code = result.OrderCode }, result);
+                // Se devuelve el código del pedido para que el cliente pueda consultarlo
+                return CreatedAtAction(nameof(GetOrderByCode), new { code = result.OrderCode, restaurantId = command.RestaurantId }, result);
             }
             catch (Exception ex)
             {

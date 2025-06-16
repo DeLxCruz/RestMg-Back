@@ -1,4 +1,4 @@
 namespace Domain.Enums
 {
-    public enum OrderStatus { Pending = 1, InPreparation, Ready, Delivered, Cancelled }
+    public enum OrderStatus { AwaitingPayment = 0, Pending = 1, InPreparation, Ready, Delivered, Cancelled }
 }
