@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 namespace Infrastructure
@@ -29,6 +30,17 @@ namespace Infrastructure
             services.AddScoped<IPasswordService, PasswordService>();
             services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
+            // Configuración de CORS
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy", builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
+            });
+
             // Configuración de Autenticación con JWT
             var jwtSettings = configuration.GetSection("JwtSettings");
             var secret = jwtSettings["Secret"]!;
@@ -42,14 +54,18 @@ namespace Infrastructure
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtSettings["Issuer"],
                     ValidAudience = jwtSettings["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+
+                    RoleClaimType = ClaimTypes.Role
                 });
 
             // Registrar el servicio de almacenamiento de archivos
-            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            // services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            services.AddScoped<IFileStorageService, FirebaseStorageService>();
 
             // Registrar el generador de códigos QR
             services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
+
 
             return services;
         }

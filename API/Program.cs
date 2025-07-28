@@ -37,6 +37,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("CorsPolicy"); // Aplica la política de CORS definida
+
 app.UseStaticFiles(); // Permite servir archivos estáticos, como imágenes y documentos
 
 app.UseRouting();
