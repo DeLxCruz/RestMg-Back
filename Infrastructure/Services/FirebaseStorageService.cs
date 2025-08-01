@@ -1,52 +1,66 @@
+// Infrastructure/Services/FirebaseStorageService.cs
 using Application.Common.Interfaces;
-using Firebase.Storage;
 using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Storage.V1; // <-- Necesario para StorageClient y UploadObjectOptions
 using Microsoft.Extensions.Configuration;
+using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Infrastructure.Services
 {
-    public class FirebaseStorageService(IConfiguration configuration) : IFileStorageService
+    public class FirebaseStorageService(IConfiguration configuration, GoogleCredential credential) : IFileStorageService
     {
         private readonly IConfiguration _configuration = configuration;
+        private readonly StorageClient _storageClient = StorageClient.Create(credential);
 
         public async Task<string> SaveFileAsync(Stream fileStream, string fileName)
         {
             var bucketName = _configuration["Firebase:BucketName"]
                 ?? throw new InvalidOperationException("Firebase:BucketName no está configurado.");
 
-            var serviceAccountJsonPath = _configuration["Firebase:AdminSdkPath"]
-                ?? throw new InvalidOperationException("Firebase:AdminSdkPath no está configurado.");
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
 
-            // 1. Cargar las credenciales desde el archivo JSON de la cuenta de servicio
-            GoogleCredential credential;
-            await using (var stream = new FileStream(serviceAccountJsonPath, FileMode.Open, FileAccess.Read))
+            if (!allowedExtensions.Contains(fileExtension))
             {
-                credential = GoogleCredential.FromStream(stream);
+                throw new InvalidOperationException($"La extensión del archivo '{fileName}' no está permitida.");
             }
 
-            // 2. Obtener el token de acceso (se refresca automáticamente si es necesario)
-            var oauthToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+            var objectName = $"uploads/{uniqueFileName}";
+            var contentType = GetContentType(fileExtension);
 
-            // 3. Generar un nombre de archivo único
-            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(fileName)}";
 
-            // 4. Crear la tarea de almacenamiento con el token de autenticación
-            var task = new FirebaseStorage(
+            // 1. Crear las opciones de subida.
+            var uploadOptions = new UploadObjectOptions
+            {
+                PredefinedAcl = PredefinedObjectAcl.PublicRead
+            };
+
+            // 2. Subir el archivo, pasando el objeto de opciones.
+            var storageObject = await _storageClient.UploadObjectAsync(
                 bucketName,
-                new FirebaseStorageOptions
-                {
-                    // El token de la cuenta de servicio se pasa aquí
-                    AuthTokenAsyncFactory = () => Task.FromResult(oauthToken),
-                    ThrowOnCancel = true
-                })
-                .Child("uploads") // Carpeta dentro del bucket
-                .Child(uniqueFileName)
-                .PutAsync(fileStream, CancellationToken.None);
+                objectName,
+                contentType,
+                fileStream,
+                uploadOptions
+            );
 
-            // 5. Esperar la subida y devolver la URL de descarga
-            var downloadUrl = await task;
-            return downloadUrl;
+            // 3. Devolver la URL pública.
+            return storageObject.MediaLink;
+        }
+
+        private static string GetContentType(string extension)
+        {
+            return extension.ToLowerInvariant() switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "application/octet-stream"
+            };
         }
     }
 }

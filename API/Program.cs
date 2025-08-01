@@ -1,6 +1,8 @@
 using API.Services;
 using Application;
 using Application.Common.Interfaces;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,14 @@ builder.Services.AddControllers();
 builder.Services
     .AddApplicationServices()
     .AddInfrastructureServices(builder.Configuration);
+
+var serviceAccountJsonPath = builder.Configuration["Firebase:AdminSdkPath"]
+    ?? throw new InvalidOperationException("Firebase:AdminSdkPath no está configurado.");
+
+FirebaseApp.Create(new AppOptions()
+{
+    Credential = GoogleCredential.FromFile(serviceAccountJsonPath),
+});
 
 // -- Servicios propios de la capa de API --
 builder.Services.AddHttpContextAccessor();

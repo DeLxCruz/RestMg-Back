@@ -1,4 +1,5 @@
 using Application.Common.Interfaces;
+using Google.Apis.Auth.OAuth2;
 using Infrastructure.Auth;
 using Infrastructure.Database;
 using Infrastructure.Services;
@@ -60,12 +61,25 @@ namespace Infrastructure
                 });
 
             // Registrar el servicio de almacenamiento de archivos
-            // services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            services.AddSingleton(sp =>
+            {
+                var serviceAccountJsonPath = configuration["Firebase:AdminSdkPath"]
+                    ?? throw new InvalidOperationException("Firebase:AdminSdkPath no está configurado.");
+                
+                return GoogleCredential.FromFile(serviceAccountJsonPath);
+            });
             services.AddScoped<IFileStorageService, FirebaseStorageService>();
 
             // Registrar el generador de códigos QR
             services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
 
+            #if DEBUG
+            services.AddHttpClient("default")
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                });
+            #endif
 
             return services;
         }
