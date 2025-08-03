@@ -4,6 +4,7 @@ namespace Domain.Models
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = null!;
+        public String? Subdomain { get; set; }
         public string? BrandingColor { get; set; }
         public string? LogoUrl { get; set; }
         public string? ClientUrl { get; set; }

@@ -14,6 +14,8 @@ namespace Infrastructure.Database.Config
             b.Property(r => r.BrandingColor).HasMaxLength(12);
             b.Property(r => r.LogoUrl).HasMaxLength(300);
             b.Property(r => r.ClientUrl).HasMaxLength(300);
+            b.Property(r => r.Subdomain).HasMaxLength(60);
+            b.HasIndex(r => r.Subdomain).IsUnique();
         }
     }
 }

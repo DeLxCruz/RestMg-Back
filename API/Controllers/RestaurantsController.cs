@@ -51,7 +51,7 @@ namespace API.Controllers
         [Authorize(Roles = "Admin")] // Solo el Admin puede editar los datos
         public async Task<IActionResult> UpdateMyRestaurant([FromBody] UpdateRestaurantRequest request)
         {
-            var command = new UpdateMyRestaurantCommand(request.Name, request.BrandingColor, request.LogoUrl, request.ClientUrl);
+            var command = new UpdateMyRestaurantCommand(request.Name, request.BrandingColor, request.LogoUrl, request.ClientUrl, request.Subdomain);
             await mediator.Send(command);
             return NoContent();
         }

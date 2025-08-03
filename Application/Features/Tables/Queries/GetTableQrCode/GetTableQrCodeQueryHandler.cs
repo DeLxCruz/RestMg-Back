@@ -22,16 +22,17 @@ namespace Application.Features.Tables.Queries.GetTableQrCode
                 .FirstOrDefaultAsync(t => t.Id == request.TableId && t.RestaurantId == restaurantId, ct)
                 ?? throw new KeyNotFoundException("Mesa no encontrada o no pertenece a su restaurante.");
 
-            // Determinar la URL base del cliente
-            var clientUrlBase = table.Restaurant.ClientUrl;
-
-            if (string.IsNullOrWhiteSpace(clientUrlBase))
+            // Validar que el restaurante tenga un slug configurado
+            if (string.IsNullOrWhiteSpace(table.Restaurant.ClientUrl))
             {
-                clientUrlBase = configuration["ClientAppSettings:ClientUrl"]
-                    ?? throw new InvalidOperationException("No se ha configurado una URL de cliente por defecto.");
+                throw new InvalidOperationException("Este restaurante no tiene un slug/subdominio configurado. Por favor, configúrelo en los ajustes.");
             }
 
-            var urlToEncode = $"{clientUrlBase}/menu/{table.Code}";
+            // Determinar la URL base del cliente
+            var clientBaseUrl = configuration["ClientAppSettings:ClientUrl"]
+               ?? throw new InvalidOperationException("La URL base del cliente (ClientUrl) no está configurada.");
+
+            var urlToEncode = $"{clientBaseUrl}/r/{table.Restaurant.Subdomain}/menu/{table.Code}";
 
             var qrCodeBytes = qrCodeGenerator.Generate(urlToEncode);
 
