@@ -23,7 +23,7 @@ namespace Application.Features.Tables.Queries.GetTableQrCode
                 ?? throw new KeyNotFoundException("Mesa no encontrada o no pertenece a su restaurante.");
 
             // Validar que el restaurante tenga un slug configurado
-            if (string.IsNullOrWhiteSpace(table.Restaurant.ClientUrl))
+            if (string.IsNullOrWhiteSpace(table.Restaurant.Subdomain))
             {
                 throw new InvalidOperationException("Este restaurante no tiene un slug/subdominio configurado. Por favor, configúrelo en los ajustes.");
             }

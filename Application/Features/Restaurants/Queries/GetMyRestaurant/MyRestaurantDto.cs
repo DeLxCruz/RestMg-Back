@@ -4,6 +4,7 @@ namespace Application.Features.Restaurants.Queries.GetMyRestaurant
         Guid Id,
         string Name,
         string? BrandingColor,
-        string? LogoUrl
+        string? LogoUrl,
+        string? Subdomain
     );
 }

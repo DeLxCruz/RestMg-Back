@@ -60,16 +60,22 @@ namespace API.Controllers
                 var query = new GetTableQrCodeQuery(id);
                 var qrCodeBytes = await mediator.Send(query);
 
-                // Se devuelve el código QR como un archivo PNG para que el cliente lo pueda descargar
                 return File(qrCodeBytes, "image/png");
             }
             catch (KeyNotFoundException ex)
             {
+                // 404 - La mesa con ese ID no existe.
                 return NotFound(new { message = ex.Message });
             }
             catch (UnauthorizedAccessException ex)
             {
+                // 403 - No tienes permiso para ver esta mesa.
                 return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // 400 - La petición es mala porque falta una pre-condición (el subdominio).
+                return BadRequest(new { message = ex.Message });
             }
         }
     }
