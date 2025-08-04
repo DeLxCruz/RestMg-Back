@@ -1,6 +1,8 @@
 using Application.Features.Menu.Queries.GetFullMenu;
+using Application.Features.Menu.Queries.GetFullMenuBySubdomain;
 using Application.Features.Menu.Queries.GetMenuItemDetail;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -27,9 +29,21 @@ namespace API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
-                // Si el handler lanza la excepción, devolvemos un 404 Not Found
+                // Si el handler lanza la excepción, se devuelve un 404 Not Found
                 return NotFound(new { message = ex.Message });
             }
+        }
+
+        [HttpGet("by-subdomain/{subdomain}")]
+        [AllowAnonymous] // Permitir acceso público para obtener el menú por subdominio
+        public async Task<IActionResult> GetMenuBySubdomain(string subdomain)
+        {
+            var query = new GetFullMenuBySubdomainQuery(subdomain);
+            var menu = await mediator.Send(query);
+
+            // Si el handler devuelve null (restaurante no encontrado), se devuelve un 404.
+            // Si devuelve una lista (incluso vacía), se devuelve 200 OK.
+            return menu != null ? Ok(menu) : NotFound(new { message = "Restaurante no encontrado." });
         }
     }
 }
