@@ -1,11 +1,7 @@
-// Infrastructure/Services/FirebaseStorageService.cs
 using Application.Common.Interfaces;
 using Google.Apis.Auth.OAuth2;
-using Google.Cloud.Storage.V1; // <-- Necesario para StorageClient y UploadObjectOptions
+using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Services
 {
@@ -14,7 +10,7 @@ namespace Infrastructure.Services
         private readonly IConfiguration _configuration = configuration;
         private readonly StorageClient _storageClient = StorageClient.Create(credential);
 
-        public async Task<string> SaveFileAsync(Stream fileStream, string fileName)
+        public async Task<string> SaveFileAsync(Stream fileStream, string fileName, Guid restaurantId)
         {
             var bucketName = _configuration["Firebase:BucketName"]
                 ?? throw new InvalidOperationException("Firebase:BucketName no está configurado.");
@@ -27,8 +23,8 @@ namespace Infrastructure.Services
                 throw new InvalidOperationException($"La extensión del archivo '{fileName}' no está permitida.");
             }
 
-            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
-            var objectName = $"uploads/{uniqueFileName}";
+            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(fileName)}";
+            var objectName = $"uploads/{restaurantId}/{uniqueFileName}";
             var contentType = GetContentType(fileExtension);
 
 

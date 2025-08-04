@@ -27,11 +27,11 @@ namespace Application.Features.Branding.Commands.UpdateRestaurantLogo
 
             // 3. Subir la imagen a Firebase Storage
             await using var stream = command.File.OpenReadStream();
-            var logoUrl = await fileStorageService.SaveFileAsync(stream, command.File.FileName);
+            var logoUrl = await fileStorageService.SaveFileAsync(stream, command.File.FileName, restaurant.Id);
 
             // 4. Actualizar la URL del logo en la base de datos
             restaurant.LogoUrl = logoUrl;
-            
+
             await context.SaveChangesAsync(ct);
 
             return logoUrl;

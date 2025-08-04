@@ -8,6 +8,6 @@ namespace Application.Common.Interfaces
         /// <param name="fileStream">El contenido del archivo.</param>
         /// <param name="fileName">El nombre original del archivo, para obtener su extensión.</param>
         /// <returns>La URL pública del archivo guardado.</returns>
-        Task<string> SaveFileAsync(Stream fileStream, string fileName);
+        Task<string> SaveFileAsync(Stream fileStream, string fileName, Guid restaurantId);
     }
 }
