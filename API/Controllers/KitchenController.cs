@@ -1,10 +1,11 @@
 using Application.Features.Kitchen.Commands.MarkOrderReady;
 using Application.Features.Kitchen.Commands.StartOrder;
-using Application.Features.Kitchen.ConfirmOrderPayment;
+using Application.Features.Kitchen.Commands.ConfirmOrderPayment;
 using Application.Features.Kitchen.Queries.GetKitchenOrders;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Application.Features.Kitchen.Queries.GetKitchenHistory;
 
 namespace API.Controllers
 {
@@ -14,9 +15,9 @@ namespace API.Controllers
     public class KitchenController(IMediator mediator) : ControllerBase
     {
         [HttpGet("orders")]
-        public async Task<IActionResult> GetOrders([FromQuery] string? status)
+        public async Task<IActionResult> GetOrders([FromQuery] string? status, [FromQuery] int? limit)
         {
-            var query = new GetKitchenOrdersQuery(status);
+            var query = new GetKitchenOrdersQuery(status, limit);
             var orders = await mediator.Send(query);
             return Ok(orders);
         }
@@ -61,6 +62,14 @@ namespace API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpGet("history/today")]
+        public async Task<IActionResult> GetTodayHistory()
+        {
+            var query = new GetKitchenHistoryQuery();
+            var report = await mediator.Send(query);
+            return Ok(report);
         }
     }
 }

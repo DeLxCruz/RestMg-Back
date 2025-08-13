@@ -29,6 +29,9 @@ namespace Infrastructure.Database.Config
         .OnDelete(DeleteBehavior.Restrict);
 
       b.Property(o => o.OrderCode).IsRequired().HasMaxLength(10);
+
+      b.Property(o => o.CompletedAt).IsRequired(false);
+
       b.HasIndex(o => new { o.RestaurantId, o.OrderCode }).IsUnique();
     }
   }

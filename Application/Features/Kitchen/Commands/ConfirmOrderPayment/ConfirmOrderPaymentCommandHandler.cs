@@ -1,6 +1,5 @@
 using Application.Common.Interfaces;
 using Application.Common.Notifications;
-using Application.Features.Kitchen.ConfirmOrderPayment;
 using Application.Features.Kitchen.Notifications;
 using Domain.Enums;
 using MediatR;

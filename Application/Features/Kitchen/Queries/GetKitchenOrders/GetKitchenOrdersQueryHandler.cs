@@ -10,7 +10,7 @@ namespace Application.Features.Kitchen.Queries.GetKitchenOrders
     {
         public async Task<List<KitchenOrderDto>> Handle(GetKitchenOrdersQuery request, CancellationToken ct)
         {
-            var restaurantId = user.RestaurantId ?? throw new UnauthorizedAccessException();
+            var restaurantId = user.RestaurantId ?? throw new System.UnauthorizedAccessException();
 
             var query = db.Orders
                 .AsNoTracking()
@@ -24,11 +24,20 @@ namespace Application.Features.Kitchen.Queries.GetKitchenOrders
                 query = query.Where(o => o.Status == filterStatus);
             }
 
-            var orders = await query
+            var queryWithIncludes = query
                 .Include(o => o.Table)
                 .Include(o => o.Items)
-                .ThenInclude(oi => oi.MenuItem)
-                .OrderBy(o => o.CreatedAt)
+                .ThenInclude(oi => oi.MenuItem);
+
+            var orderedQuery = queryWithIncludes.OrderByDescending(o => o.CreatedAt);
+
+            IQueryable<Domain.Models.Order> finalQuery = orderedQuery;
+            if (request.Limit.HasValue && request.Limit > 0)
+            {
+                finalQuery = orderedQuery.Take(request.Limit.Value);
+            }
+
+            var orders = await finalQuery
                 .Select(o => new KitchenOrderDto(
                     o.Id,
                     o.OrderCode,

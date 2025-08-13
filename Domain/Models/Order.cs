@@ -11,6 +11,7 @@ namespace Domain.Models
         public Guid TableId { get; set; }
         public Table Table { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CompletedAt { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public decimal Total { get; set; }
 

@@ -19,8 +19,12 @@ namespace Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // Configuración de Base de Datos
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            // Configuración de Base de Datos - seleccionar según ambiente
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var connectionString = environment == "Development"
+                ? configuration.GetConnectionString("DefaultConnection")
+                : configuration.GetConnectionString("DeployConnection");
+
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
@@ -36,9 +40,13 @@ namespace Infrastructure
             {
                 options.AddPolicy("CorsPolicy", builder =>
                 {
-                    builder.AllowAnyOrigin()
+                    var clientUrl = configuration["ClientAppSettings:ClientUrl"]
+                        ?? throw new InvalidOperationException("ClientAppSettings:ClientUrl no está configurado.");
+
+                    builder.WithOrigins(clientUrl)
                            .AllowAnyMethod()
-                           .AllowAnyHeader();
+                           .AllowAnyHeader()
+                           .AllowCredentials();
                 });
             });
 
@@ -47,27 +55,58 @@ namespace Infrastructure
             var secret = jwtSettings["Secret"]!;
 
             services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+               .AddJwtBearer(options =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtSettings["Issuer"],
-                    ValidAudience = jwtSettings["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = jwtSettings["Issuer"],
+                        ValidAudience = jwtSettings["Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                        RoleClaimType = ClaimTypes.Role
+                    };
 
-                    RoleClaimType = ClaimTypes.Role
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) &&
+                                (path.StartsWithSegments("/kitchenHub")))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             // Registrar el servicio de almacenamiento de archivos
             services.AddSingleton(sp =>
             {
-                var serviceAccountJsonPath = configuration["Firebase:AdminSdkPath"]
-                    ?? throw new InvalidOperationException("Firebase:AdminSdkPath no está configurado.");
-                
-                return GoogleCredential.FromFile(serviceAccountJsonPath);
+                var config = sp.GetRequiredService<IConfiguration>();
+
+                var serviceAccountJsonPath = config["Firebase:AdminSdkPath"];
+                if (!string.IsNullOrEmpty(serviceAccountJsonPath) && File.Exists(serviceAccountJsonPath))
+                {
+                    return GoogleCredential.FromFile(serviceAccountJsonPath);
+                }
+
+                var firebaseConfigJson = config["Firebase:Config"];
+                if (!string.IsNullOrEmpty(firebaseConfigJson))
+                {
+                    return GoogleCredential.FromJson(firebaseConfigJson);
+                }
+
+                throw new InvalidOperationException("Las credenciales de Firebase no están configuradas. Se requiere 'Firebase:AdminSdkPath' (para desarrollo) o 'Firebase:Config' (para producción).");
             });
+
+            // El servicio de almacenamiento ahora recibirá la credencial correcta
+            // según el entorno en el que se esté ejecutando.
             services.AddScoped<IFileStorageService, FirebaseStorageService>();
 
             // Registrar el generador de códigos QR

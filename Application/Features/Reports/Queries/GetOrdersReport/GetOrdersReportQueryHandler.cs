@@ -9,19 +9,17 @@ namespace Application.Features.Reports.Queries.GetOrdersReport
     {
         public async Task<List<OrdersReportItemDto>> Handle(GetOrdersReportQuery request, CancellationToken ct)
         {
-            var restaurantId = user.RestaurantId ?? throw new UnauthorizedAccessException();
+            var restaurantId = user.RestaurantId ?? throw new System.UnauthorizedAccessException();
 
             var query = db.Orders
                 .AsNoTracking()
                 .Where(o => o.RestaurantId == restaurantId);
 
-            // Aplicar filtro de fecha "desde"
             if (request.From.HasValue)
             {
                 query = query.Where(o => o.CreatedAt >= request.From.Value.ToUniversalTime());
             }
 
-            // Aplicar filtro de fecha "hasta"
             if (request.To.HasValue)
             {
                 query = query.Where(o => o.CreatedAt < request.To.Value.AddDays(1).ToUniversalTime());
@@ -29,7 +27,7 @@ namespace Application.Features.Reports.Queries.GetOrdersReport
 
             var reportItems = await query
                 .Include(o => o.Table)
-                .OrderByDescending(o => o.CreatedAt) // Los más recientes primero
+                .OrderByDescending(o => o.CreatedAt)
                 .Select(o => new OrdersReportItemDto(
                     o.Id,
                     o.OrderCode,

@@ -17,6 +17,8 @@ namespace Application.Features.Kitchen.Commands.MarkOrderReady
             if (order.Status != OrderStatus.InPreparation) throw new InvalidOperationException("Solo se puede marcar como listo un pedido que está en preparación.");
 
             order.Status = OrderStatus.Ready;
+            order.CompletedAt = DateTime.UtcNow;
+            
             await db.SaveChangesAsync(ct);
 
             // Publicar notificación

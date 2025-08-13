@@ -1,8 +1,7 @@
+using API.Hubs;
 using API.Services;
 using Application;
 using Application.Common.Interfaces;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,19 +18,9 @@ builder.Services
     .AddApplicationServices()
     .AddInfrastructureServices(builder.Configuration);
 
-var serviceAccountJsonPath = builder.Configuration["Firebase:AdminSdkPath"]
-    ?? throw new InvalidOperationException("Firebase:AdminSdkPath no está configurado.");
-
-FirebaseApp.Create(new AppOptions()
-{
-    Credential = GoogleCredential.FromFile(serviceAccountJsonPath),
-});
-
 // -- Servicios propios de la capa de API --
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // -- Hubs --
 builder.Services.AddSignalR();
@@ -39,24 +28,36 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Habilitar Swagger siempre para el proyecto de grado
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestMg API v1");
+    c.RoutePrefix = string.Empty;
+});
 
 app.UseHttpsRedirection();
 
-app.UseCors("CorsPolicy"); // Aplica la política de CORS definida
+// Servir archivos estáticos
+app.UseStaticFiles();
 
-app.UseStaticFiles(); // Permite servir archivos estáticos, como imágenes y documentos
-
+// Enrutamiento
 app.UseRouting();
 
+// CORS
+app.UseCors("CorsPolicy");
+
+// Autenticación - Identifica quién es el usuario.
 app.UseAuthentication();
+
+// Autorización - Verifica si el usuario tiene permiso.
 app.UseAuthorization();
 
+// Habilitar WebSockets
+app.UseWebSockets();
+
 app.MapControllers();
-app.MapHub<API.Hubs.KitchenHub>("/kitchenHub"); // Mapea el hub de SignalR
+
+app.MapHub<KitchenHub>("/kitchenHub");
 
 app.Run();
