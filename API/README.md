@@ -29,32 +29,261 @@ La capa **API** es como la "recepción" del sistema. Es el lugar donde llegan to
 - No contienen lógica de negocio (eso está en otras capas)
 - Traducen entre lo que entienden las aplicaciones externas y lo que entiende el sistema interno
 
-## 🔄 SignalR Hubs (Comunicación en Tiempo Real)
+## 🔄 SignalR - Comunicación en Tiempo Real
 
-### ¿Qué son los Hubs?
-Los Hubs son como "centros de comunicación" que permiten enviar información al instante sin que el usuario tenga que actualizar la página.
+### Implementación Real de SignalR
 
-### KitchenHub (Centro de Comunicación de Cocina)
-**¿Para qué sirve?**
-- Cuando un cliente hace un pedido, la cocina lo ve inmediatamente en su pantalla
-- Cuando la cocina marca un pedido como "listo", el mesero lo ve al instante
-- Si un plato se agota, se actualiza automáticamente en todas las pantallas
+**¿Qué hace SignalR en este proyecto?**
+SignalR permite que la aplicación de cocina reciba notificaciones en tiempo real cuando suceden eventos importantes, sin necesidad de recargar la página o hacer polling.
 
-**¿Cómo funciona?**
-1. Las aplicaciones (cocina, meseros) se "conectan" al Hub al iniciar
-2. Cuando sucede algo importante (nuevo pedido, cambio de estado), el sistema envía la información a todos los conectados
-3. Las pantallas se actualizan automáticamente sin necesidad de recargar
+### KitchenHub - El Centro de Comunicación
 
-**Ejemplo en la vida real:**
-Es como el sistema de comunicación en un aeropuerto. Cuando hay un cambio en un vuelo, se anuncia automáticamente en todas las pantallas y altavoces al mismo tiempo.
+**Código real implementado:**
+```csharp
+[Authorize]
+public class KitchenHub : Hub
+{
+    public override async Task OnConnectedAsync()
+    {
+        // Obtiene el RestaurantId del token JWT del usuario autenticado
+        var restaurantId = Context.User?.FindFirstValue("restaurantId");
 
-### Notification Handlers (Manejadores de Notificaciones)
-Estos son los "mensajeros" que detectan cuando sucede algo importante y envían la notificación correspondiente:
+        if (!string.IsNullOrEmpty(restaurantId))
+        {
+            // Une esta conexión al grupo de su restaurante
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"restaurant-{restaurantId}");
+        }
 
-- **NewOrderReceivedSignalRHandler**: Cuando llega un pedido nuevo → Notifica a la cocina
-- **OrderStatusChangedSignalRHandler**: Cuando cambia el estado de un pedido → Notifica a meseros y cliente
-- **MenuItemAvailabilitySignalRHandler**: Cuando un plato se agota → Actualiza el menú en todas las pantallas
-- **TableStateChangedSignalRHandler**: Cuando una mesa se ocupa o libera → Actualiza el panel de administración
+        await base.OnConnectedAsync();
+    }
+}
+```
+
+**¿Cómo funciona paso a paso?**
+1. **Conexión inicial**: Cuando un usuario (cocina/admin) abre la aplicación, se conecta automáticamente al hub
+2. **Autenticación**: SignalR verifica el token JWT del usuario 
+3. **Agrupación**: Se une automáticamente al grupo de su restaurante usando el ID del token
+4. **Listo**: Ahora puede recibir notificaciones específicas de su restaurante
+
+### Notification Handlers - Los Mensajeros
+
+El sistema usa MediatR para publicar eventos y SignalR para enviarlos en tiempo real:
+
+#### 1. Nueva Orden Recibida
+```csharp
+public class NewOrderReceivedSignalRHandler : INotificationHandler<NewOrderReceivedNotification>
+{
+    public Task Handle(NewOrderReceivedNotification notification, CancellationToken ct)
+    {
+        var groupName = $"restaurant-{notification.RestaurantId}";
+        // Envía mensaje "NewOrder" solo al grupo de ese restaurante
+        return _hubContext.Clients.Group(groupName)
+            .SendAsync("NewOrder", notification, ct);
+    }
+}
+```
+
+**¿Cuándo se dispara?** 
+- Cuando un cliente confirma el pago de su pedido
+- En `ConfirmOrderPaymentCommandHandler` se publica `NewOrderReceivedNotification`
+- Este handler lo captura y lo envía a la cocina vía SignalR
+
+#### 2. Cambio de Estado de Orden
+```csharp
+public class OrderStatusChangedSignalRHandler : INotificationHandler<OrderStatusChangedNotification>
+{
+    public Task Handle(OrderStatusChangedNotification notification, CancellationToken ct)
+    {
+        var groupName = $"restaurant-{notification.RestaurantId}";
+        return _hubContext.Clients.Group(groupName)
+            .SendAsync("OrderStatusUpdated", notification.OrderId, notification.NewStatus, ct);
+    }
+}
+```
+
+**¿Cuándo se dispara?**
+- Cuando cocina marca una orden como "En preparación" (`StartOrderCommand`)
+- Cuando cocina marca una orden como "Lista" (`MarkOrderReadyCommand`) 
+- Actualiza en tiempo real el estado en todas las pantallas conectadas
+
+#### 3. Cambio de Estado de Mesa
+```csharp
+public class TableStateChangedSignalRHandler : INotificationHandler<TableStateChangedNotification>
+{
+    public Task Handle(TableStateChangedNotification notification, CancellationToken cancellationToken)
+    {
+        var groupName = $"restaurant-{notification.RestaurantId}";
+        return _hubContext.Clients.Group(groupName)
+            .SendAsync("TableStateUpdated", notification.TableId, notification.NewState, cancellationToken);
+    }
+}
+```
+
+#### 4. Disponibilidad de MenuItem
+```csharp
+public class MenuItemAvailabilitySignalRHandler : INotificationHandler<MenuItemAvailabilityNotification>
+{
+    public Task Handle(MenuItemAvailabilityNotification notification, CancellationToken cancellationToken)
+    {
+        var groupName = $"restaurant-{notification.RestaurantId}";
+        return _hubContext.Clients.Group(groupName)
+            .SendAsync("MenuItemAvailabilityUpdated", notification.MenuItemId, notification.IsAvailable, cancellationToken);
+    }
+}
+```
+
+### Flujo Completo de una Orden
+
+**Ejemplo real de cómo funciona:**
+
+1. **Cliente hace pedido → Paga**
+   ```csharp
+   // En ConfirmOrderPaymentCommandHandler
+   await publisher.Publish(new NewOrderReceivedNotification(...));
+   ```
+
+2. **Cocina recibe notificación instantánea**
+   - El `NewOrderReceivedSignalRHandler` envía mensaje `"NewOrder"` via SignalR
+   - La aplicación de cocina actualiza su lista sin recargar
+
+3. **Cocina inicia preparación**
+   ```csharp
+   // En StartOrderCommandHandler  
+   order.Status = OrderStatus.InPreparation;
+   await publisher.Publish(new OrderStatusChangedNotification(...));
+   ```
+
+4. **Todas las pantallas se actualizan**
+   - El `OrderStatusChangedSignalRHandler` envía `"OrderStatusUpdated"`
+   - Panel de admin y cocina ven el cambio al instante
+
+5. **Cocina marca como lista**
+   ```csharp
+   // En MarkOrderReadyCommandHandler
+   order.Status = OrderStatus.Ready;
+   await publisher.Publish(new OrderStatusChangedNotification(...));
+   ```
+
+6. **Meseros reciben notificación**
+   - Todas las pantallas ven que el pedido está listo para entregar
+
+### Mensajes SignalR Implementados
+
+**Para el cliente JavaScript, estos son los eventos que se pueden escuchar:**
+
+```javascript
+connection.on("NewOrder", (orderData) => {
+    // Nueva orden llegó a cocina
+    console.log("Nueva orden:", orderData);
+});
+
+connection.on("OrderStatusUpdated", (orderId, newStatus) => {
+    // Estado de orden cambió  
+    console.log(`Orden ${orderId} ahora está: ${newStatus}`);
+});
+
+connection.on("TableStateUpdated", (tableId, newState) => {
+    // Estado de mesa cambió
+    console.log(`Mesa ${tableId} ahora está: ${newState}`);
+});
+
+connection.on("MenuItemAvailabilityUpdated", (itemId, isAvailable) => {
+    // Disponibilidad de item cambió
+    console.log(`Item ${itemId} disponible: ${isAvailable}`);
+});
+```
+
+### Configuración en Program.cs
+
+```csharp
+// Agregar SignalR
+builder.Services.AddSignalR();
+
+// Configurar el hub endpoint
+app.MapHub<KitchenHub>("/hubs/kitchen");
+```
+
+**URL de conexión:** `https://tu-api.com/hubs/kitchen`
+
+### Seguridad Implementada
+
+- **Autenticación requerida**: `[Authorize]` en el hub
+- **Grupos por restaurante**: Solo recibes notificaciones de tu restaurante
+- **JWT validation**: El token se valida automáticamente
+- **Claims-based grouping**: Se usa el `restaurantId` del token para agrupar
+
+### 📊 Diagrama de Flujo: SignalR en Tiempo Real
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   App Cocina    │    │   App Admin     │    │   App Cliente   │
+│   (Frontend)    │    │   (Frontend)    │    │   (Frontend)    │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          │ 1. Conecta con JWT   │ 1. Conecta con JWT   │ 1. Hace pedido
+          ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    KitchenHub (SignalR)                        │
+│  • Recibe conexiones autenticadas                              │
+│  • Une usuarios a grupo: "restaurant-{RestaurantId}"          │
+│  • Valida permisos automáticamente                            │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      │ 2. Cliente paga pedido
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              ConfirmOrderPaymentCommandHandler                  │
+│  • Cambia estado: AwaitingPayment → Pending                   │
+│  • Publica: NewOrderReceivedNotification                      │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      │ 3. MediatR enruta notification
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            NewOrderReceivedSignalRHandler                       │
+│  • Recibe notification de MediatR                             │
+│  • Envía "NewOrder" via SignalR al grupo del restaurante      │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      │ 4. SignalR envía mensaje
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 Clientes Conectados                            │
+│  ┌─────────────────┐    ┌─────────────────┐                   │
+│  │   App Cocina    │    │   App Admin     │                   │
+│  │                 │    │                 │                   │
+│  │ • Recibe        │    │ • Recibe        │                   │
+│  │   "NewOrder"    │    │   "NewOrder"    │                   │
+│  │ • Actualiza     │    │ • Actualiza     │                   │
+│  │   pantalla      │    │   dashboard     │                   │
+│  │   sin recargar  │    │   sin recargar  │                   │
+│  └─────────────────┘    └─────────────────┘                   │
+└─────────────────────────────────────────────────────────────────┘
+
+Resultado: 🎯 NOTIFICACIÓN EN TIEMPO REAL SIN POLLING
+```
+
+### 🔄 Flujo Completo de Estados con SignalR
+
+```
+Estado Inicial: AwaitingPayment
+           ↓
+    [Cliente paga] ───→ SignalR: "NewOrder" ───→ 📱 Cocina ve pedido
+           ↓
+      Pending ←─────────────────────────────────────┘
+           ↓
+    [Cocina inicia] ───→ SignalR: "OrderStatusUpdated" ───→ 📱 Admin ve cambio
+           ↓
+   InPreparation ←─────────────────────────────────────────┘
+           ↓
+   [Cocina termina] ───→ SignalR: "OrderStatusUpdated" ───→ 📱 Meseros ven pedido listo
+           ↓
+      Ready ←─────────────────────────────────────────────┘
+           ↓
+   [Mesero entrega]
+           ↓
+     Delivered
+```
 
 ## 📁 Estructura del Proyecto
 
@@ -260,6 +489,119 @@ public class OrdersController : ControllerBase
 - `POST /api/orders` - Crear nueva orden (público)
 - `GET /api/orders/{code}/status` - Estado de orden (público)
 - `GET /api/orders/restaurant/{restaurantId}` - Órdenes del restaurante
+
+### 📋 Diagrama de Flujo: POST /api/orders (Crear Pedido)
+
+**Ejemplo: Cliente hace un pedido desde su teléfono**
+
+```
+┌─────────────────┐
+│   📱 Cliente    │
+│  escanea QR de  │  1. POST /api/orders
+│  mesa y hace    │ ────────────────────┐
+│  pedido         │                     ▼
+└─────────────────┘           ┌─────────────────┐
+                              │  OrdersController│
+                              │  • Recibe JSON   │
+                              │  • Valida datos  │
+                              └─────────┬───────┘
+                                        │ 2. Crea CreateOrderCommand
+                                        ▼
+                              ┌─────────────────┐
+                              │    MediatR      │
+                              │  • Enruta a     │
+                              │    Handler      │
+                              └─────────┬───────┘
+                                        │ 3. Send(command)
+                                        ▼
+                              ┌─────────────────┐
+                              │CreateOrderCommand│
+                              │Handler          │
+                              │                 │
+                              │ 4. Validaciones:│
+                              │  ✓ Mesa existe  │
+                              │  ✓ Platos exist │
+                              │  ✓ Disponibles  │
+                              └─────────┬───────┘
+                                        │ 5. Si OK, crea Order
+                                        ▼
+                              ┌─────────────────┐
+                              │  📊 Database    │
+                              │  • INSERT Order │
+                              │  • INSERT Items │
+                              │  • UPDATE Table │
+                              │    (Occupied)   │
+                              └─────────┬───────┘
+                                        │ 6. Genera código único
+                                        ▼
+                              ┌─────────────────┐
+                              │    Response     │
+                              │  {              │
+                              │   "orderCode":  │
+                              │   "ORD-A7B2",   │
+                              │   "status":     │
+                              │   "AwaitingPay" │
+                              │  }              │
+                              └─────────┬───────┘
+                                        │ 7. HTTP 201 Created
+                                        ▼
+┌─────────────────┐           ┌─────────────────┐
+│   📱 Cliente    │  ◄────────│     API         │
+│  recibe código  │           │   Response      │
+│  ORD-A7B2 para  │           │                 │
+│  seguimiento    │           │                 │
+└─────────────────┘           └─────────────────┘
+
+✅ RESULTADO: Cliente tiene código para seguir su pedido
+```
+
+### 🔄 Arquitectura de Capas en Acción
+
+**¿Cómo viajan los datos por las capas?**
+
+```
+📱 Cliente (JSON) → 🌐 API Layer → 🎯 Application Layer → 🏛️ Domain Layer → 📊 Database
+
+PASO A PASO:
+
+1. API Layer (Controllers):
+   ┌─────────────────────────┐
+   │ OrdersController        │
+   │ • Recibe HTTP Request   │
+   │ • Valida DTO           │
+   │ • Convierte a Command  │
+   └─────────┬───────────────┘
+             │
+2. Application Layer (Use Cases):
+   ┌─────────▼───────────────┐
+   │ CreateOrderCommandHandler│
+   │ • Lógica de negocio     │
+   │ • Validaciones         │
+   │ • Coordina operaciones │
+   └─────────┬───────────────┘
+             │
+3. Domain Layer (Entities):
+   ┌─────────▼───────────────┐
+   │ Order, OrderItem       │
+   │ • Reglas de dominio    │
+   │ • Cálculos (totales)   │
+   │ • Validaciones básicas │
+   └─────────┬───────────────┘
+             │
+4. Infrastructure Layer (Data):
+   ┌─────────▼───────────────┐
+   │ AppDbContext           │
+   │ • Entity Framework     │
+   │ • SQL Server           │
+   │ • Persistencia        │
+   └─────────────────────────┘
+
+VENTAJAS DE ESTA ARQUITECTURA:
+✓ Separación clara de responsabilidades
+✓ Fácil testing (cada capa independiente)
+✓ Mantenible (cambios no afectan otras capas)
+✓ Escalable (se puede cambiar BD sin afectar lógica)
+```
 
 ### 👨‍🍳 KitchenController
 **Responsabilidad**: Operaciones de cocina
@@ -542,6 +884,135 @@ app.Run();
 [Authorize(Roles = "Admin")]           // Solo administradores
 [Authorize(Roles = "Admin,Kitchen")]   // Admin o cocina
 [AllowAnonymous]                       // Endpoint público
+```
+
+### 🔐 Diagrama de Flujo: Autenticación y Autorización
+
+**¿Cómo funciona la seguridad paso a paso?**
+
+```
+1. LOGIN INICIAL:
+┌─────────────────┐
+│  👤 Usuario     │  POST /api/auth/login
+│  (admin/cocina) │ ─────────────────────┐
+│  email+password │                      ▼
+└─────────────────┘            ┌─────────────────┐
+                               │ AuthController  │
+                               │ • Valida creds  │
+                               │ • Consulta BD   │
+                               └─────────┬───────┘
+                                         │ Si válido
+                                         ▼
+                               ┌─────────────────┐
+                               │   JwtService    │
+                               │ Genera token:   │
+                               │ {               │
+                               │  "userId": 123, │
+                               │  "restaurantId":│
+                               │    "rest-456",  │
+                               │  "role": "Admin"│
+                               │ }               │
+                               └─────────┬───────┘
+                                         │ HTTP 200 + token
+                                         ▼
+┌─────────────────┐              ┌─────────────────┐
+│  👤 Usuario     │ ◄────────────│   Response      │
+│  guarda token   │              │ {               │
+│  en su app      │              │  "token": "..."  │
+│                 │              │ }               │
+└─────────────────┘              └─────────────────┘
+
+2. PETICIONES AUTENTICADAS:
+┌─────────────────┐
+│  📱 App         │  GET /api/kitchen/orders
+│  incluye:       │  Authorization: Bearer {token}
+│  Bearer token   │ ─────────────────────────────────┐
+└─────────────────┘                                  ▼
+                                         ┌─────────────────┐
+                                         │ Middleware JWT  │
+                                         │ • Valida token  │
+                                         │ • Extrae claims │
+                                         │ • Verifica role │
+                                         └─────────┬───────┘
+                                                   │ Si autorizado
+                                                   ▼
+                                         ┌─────────────────┐
+                                         │KitchenController│
+                                         │[Authorize(Roles:│
+                                         │"Admin,Kitchen")]│
+                                         │                 │
+                                         │ ✅ ACCESO       │
+                                         │    PERMITIDO    │
+                                         └─────────────────┘
+
+3. CONTROL DE ACCESO POR RESTAURANTE:
+┌─────────────────┐
+│CurrentUserService│ ← Token contiene restaurantId
+│ • RestaurantId  │
+│ • UserId        │
+│ • Role          │
+└─────────┬───────┘
+          │ Inyectado en handlers
+          ▼
+┌─────────────────┐
+│  GetKitchenOrders│
+│  Handler        │
+│                 │
+│ var restaurantId│
+│   = user.       │
+│   RestaurantId; │
+│                 │
+│ query.Where(o =>│
+│  o.RestaurantId │
+│  == restaurantId│
+│ );              │
+└─────────────────┘
+
+🔒 RESULTADO: Usuario solo ve datos de SU restaurante
+```
+
+### 🌊 Flujo de Datos Completo: Cliente → Base de Datos
+
+```
+EJEMPLO: Cliente consulta estado de su pedido
+
+📱 Cliente                🌐 API                🎯 Application           📊 Database
+    │                        │                      │                       │
+    │ GET /orders/ABC123/     │                      │                       │
+    │ status                  │                      │                       │
+    ├────────────────────────►│                      │                       │
+    │                        │ 1. OrdersController   │                       │
+    │                        │    recibe petición    │                       │
+    │                        │                      │                       │
+    │                        │ 2. Crea Query        │                       │
+    │                        ├─────────────────────►│                       │
+    │                        │   GetOrderByCode     │                       │
+    │                        │                      │                       │
+    │                        │                      │ 3. Handler ejecuta    │
+    │                        │                      │    validaciones       │
+    │                        │                      │                       │
+    │                        │                      │ 4. Consulta BD       │
+    │                        │                      ├──────────────────────►│
+    │                        │                      │   SELECT * FROM       │
+    │                        │                      │   Orders WHERE        │
+    │                        │                      │   Code = 'ABC123'     │
+    │                        │                      │                       │
+    │                        │                      │ 5. Retorna Order      │
+    │                        │                      │◄──────────────────────┤
+    │                        │                      │   Order entity        │
+    │                        │                      │                       │
+    │                        │ 6. Convierte a DTO   │                       │
+    │                        │◄─────────────────────┤                       │
+    │                        │   OrderStatusDto     │                       │
+    │                        │                      │                       │
+    │ 7. HTTP 200 + JSON     │                      │                       │
+    │◄───────────────────────┤                      │                       │
+    │ {                      │                      │                       │
+    │   "status": "Ready",   │                      │                       │
+    │   "estimatedTime": 5   │                      │                       │
+    │ }                      │                      │                       │
+
+⚡ TIEMPO TOTAL: ~50-100ms (consulta simple)
 ```
 
 ### Validación de Entrada
