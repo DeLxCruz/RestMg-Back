@@ -32,7 +32,7 @@ namespace Application.Features.Tables.Queries.GetTableQrCode
             var clientBaseUrl = configuration["ClientAppSettings:ClientUrl"]
                ?? throw new InvalidOperationException("La URL base del cliente (ClientUrl) no está configurada.");
 
-            var urlToEncode = $"{clientBaseUrl}/r/{table.Restaurant.Subdomain}/menu/{table.Code}";
+            var urlToEncode = $"{clientBaseUrl}/r/{table.Restaurant.Subdomain}/menu/{table.Id}";
 
             var qrCodeBytes = qrCodeGenerator.Generate(urlToEncode);
 
