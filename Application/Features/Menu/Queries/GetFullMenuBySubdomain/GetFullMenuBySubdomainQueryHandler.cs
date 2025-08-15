@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Application.Features.Menu.Queries.GetFullMenuBySubdomain
 {
     public class GetFullMenuBySubdomainQueryHandler(IApplicationDbContext dbContext)
-        : IRequestHandler<GetFullMenuBySubdomainQuery, List<MenuCategoryDto>>
+        : IRequestHandler<GetFullMenuBySubdomainQuery, MenuWithRestaurantDto?>
     {
-        public async Task<List<MenuCategoryDto>> Handle(GetFullMenuBySubdomainQuery request, CancellationToken ct)
+        public async Task<MenuWithRestaurantDto?> Handle(GetFullMenuBySubdomainQuery request, CancellationToken ct)
         {
             // Buscamos el restaurante por su subdominio, asegurándonos de que no sea sensible a mayúsculas/minúsculas.
             var restaurant = await dbContext.Restaurants
@@ -19,11 +19,11 @@ namespace Application.Features.Menu.Queries.GetFullMenuBySubdomain
             // La API lo traducirá en un 404 Not Found.
             if (restaurant == null)
             {
-                return [];
+                return null;
             }
 
             // Si se encuentra, se obtienen sus categorías y platos activos.
-            var menu = await dbContext.Categories
+            var categories = await dbContext.Categories
                 .AsNoTracking()
                 .Where(c => c.RestaurantId == restaurant.Id && c.IsActive)
                 .OrderBy(c => c.DisplayOrder)
@@ -39,7 +39,11 @@ namespace Application.Features.Menu.Queries.GetFullMenuBySubdomain
                 ))
                 .ToListAsync(ct);
 
-            return menu;
+            return new MenuWithRestaurantDto
+            {
+                RestaurantId = restaurant.Id,
+                Categories = categories
+            };
         }
     }
 }

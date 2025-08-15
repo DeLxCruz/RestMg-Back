@@ -5,5 +5,5 @@ using System.Collections.Generic;
 namespace Application.Features.Menu.Queries.GetFullMenuBySubdomain
 {
     public record GetFullMenuBySubdomainQuery(string Subdomain)
-        : IRequest<List<MenuCategoryDto>>;
+    : IRequest<MenuWithRestaurantDto?>;
 }
