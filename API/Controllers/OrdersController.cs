@@ -1,12 +1,14 @@
 using Application.Features.Orders.Commands.CreateOrder;
 using Application.Features.Orders.Queries.GetOrderByCode;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Kitchen, Admin")] // Permitir acceso a usuarios autenticados
     public class OrdersController(ISender mediator) : ControllerBase
     {
         [HttpPost]
@@ -37,6 +39,14 @@ namespace API.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
+        }
+
+        [HttpGet("restaurant/{restaurantId}")]
+        public async Task<IActionResult> GetRestaurantOrders(Guid restaurantId)
+        {
+            var query = new Application.Features.Orders.Queries.GetRestaurantOrders.GetRestaurantOrdersQuery(restaurantId);
+            var orders = await mediator.Send(query);
+            return Ok(orders);
         }
     }
 }
