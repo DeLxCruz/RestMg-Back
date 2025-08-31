@@ -1,4 +1,4 @@
 namespace Domain.Enums
 {
-    public enum UserRole { Admin = 1, Kitchen = 2 }
+    public enum UserRole { Admin = 1, Kitchen = 2, Awaiter = 3 }
 }

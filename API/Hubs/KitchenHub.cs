@@ -12,6 +12,7 @@ namespace API.Hubs
         {
             // Se obtiene el ID del restaurante del token JWT del usuario, igual que en CurrentUserService
             var restaurantId = Context.User?.FindFirstValue("restaurantId");
+            Console.WriteLine($"KitchenHub: User {Context.UserIdentifier} connected. RestaurantId: {restaurantId}");
 
             if (!string.IsNullOrEmpty(restaurantId))
             {

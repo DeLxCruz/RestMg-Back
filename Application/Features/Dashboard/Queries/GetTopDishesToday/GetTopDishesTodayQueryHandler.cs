@@ -10,7 +10,9 @@ namespace Application.Features.Dashboard.Queries.GetTopDishesToday
         public async Task<List<TopDishDto>> Handle(GetTopDishesTodayQuery request, CancellationToken ct)
         {
             var restaurantId = user.RestaurantId ?? throw new UnauthorizedAccessException();
-            var today = DateTime.UtcNow.Date;
+            var colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("SA Western Standard Time");
+            var colombiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, colombiaZone);
+            var today = colombiaTime.Date;
             var tomorrow = today.AddDays(1);
 
             var hasOrderItemsToday = await db.OrderItems
@@ -28,9 +30,10 @@ namespace Application.Features.Dashboard.Queries.GetTopDishesToday
                 .Where(oi => oi.Order.RestaurantId == restaurantId
                             && oi.Order.CreatedAt >= today
                             && oi.Order.CreatedAt < tomorrow)
-                .GroupBy(oi => new { oi.MenuItem.Name })
+                .Select(oi => new { oi.MenuItem.Name, oi.Quantity })
+                .GroupBy(oi => oi.Name)
                 .Select(g => new TopDishDto(
-                    g.Key.Name,
+                    g.Key,
                     g.Sum(oi => oi.Quantity)
                 ))
                 .OrderByDescending(d => d.TotalSold)

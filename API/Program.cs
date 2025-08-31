@@ -11,7 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // -- EXTENSIONES DE REGISTRO --
 builder.Services
@@ -21,6 +25,7 @@ builder.Services
 // -- Servicios propios de la capa de API --
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<INotificationsHub, NotificationsHubService>();
 
 // -- Hubs --
 builder.Services.AddSignalR();
@@ -59,5 +64,6 @@ app.UseWebSockets();
 app.MapControllers();
 
 app.MapHub<KitchenHub>("/kitchenHub");
+app.MapHub<NotificationsHub>("/notificationsHub");
 
 app.Run();

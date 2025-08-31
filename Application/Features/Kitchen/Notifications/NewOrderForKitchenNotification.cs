@@ -1,8 +1,9 @@
+using Domain.Models;
 using MediatR;
 
 namespace Application.Features.Kitchen.Notifications
 {
-    public record NewOrderReceivedNotification(
+    public record NewOrderForKitchenNotification(
         Guid RestaurantId,
         Guid OrderId,
         string TableCode,

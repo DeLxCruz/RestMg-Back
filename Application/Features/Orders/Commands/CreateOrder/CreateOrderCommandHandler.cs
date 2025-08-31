@@ -1,6 +1,5 @@
 using Application.Common.Interfaces;
 using Application.Common.Notifications;
-using Application.Features.Kitchen.Notifications;
 using Domain.Enums;
 using Domain.Models;
 using MediatR;
@@ -8,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Orders.Commands.CreateOrder
 {
-    public class CreateOrderCommandHandler(IApplicationDbContext db)
+    public class CreateOrderCommandHandler(IApplicationDbContext db, IPublisher publisher)
         : IRequestHandler<CreateOrderCommand, CreateOrderResult>
     {
         public async Task<CreateOrderResult> Handle(CreateOrderCommand command, CancellationToken ct)
@@ -26,14 +25,12 @@ namespace Application.Features.Orders.Commands.CreateOrder
                 throw new InvalidOperationException("Uno o más platos no están disponibles o no existen.");
 
             var orderItems = new List<OrderItem>();
-            var notificationItems = new List<OrderItemNotificationDto>();
             decimal total = 0;
 
             foreach (var itemCommand in command.Items)
             {
                 var menuItem = menuItemsFromDb[itemCommand.MenuItemId];
                 orderItems.Add(new OrderItem { MenuItemId = menuItem.Id, Quantity = itemCommand.Quantity, UnitPrice = menuItem.Price });
-                notificationItems.Add(new OrderItemNotificationDto(menuItem.Name, itemCommand.Quantity));
                 total += menuItem.Price * itemCommand.Quantity;
             }
 
@@ -52,7 +49,19 @@ namespace Application.Features.Orders.Commands.CreateOrder
             await db.Orders.AddAsync(newOrder, ct);
             await db.SaveChangesAsync(ct);
 
-            return new CreateOrderResult(newOrder.Id, newOrder.OrderCode);
+            Console.WriteLine($"CreateOrderCommandHandler: Publishing NewOrderReceivedNotification for OrderId: {newOrder.Id}, RestaurantId: {newOrder.RestaurantId}, Status: {newOrder.Status}");
+            // Publicar notificación de nuevo pedido
+            await publisher.Publish(new NewOrderReceivedNotification(
+                newOrder.RestaurantId,
+                newOrder.Id,
+                newOrder.OrderCode,
+                newOrder.Status.ToString(),
+                newOrder.Total,
+                newOrder.CreatedAt,
+                table.Code
+            ), ct);
+
+            return new CreateOrderResult(newOrder.Id, newOrder.OrderCode, newOrder.TableId);
         }
 
         private static string GenerateOrderCode() => new Random().Next(1000, 9999).ToString("D4");

@@ -15,6 +15,7 @@ namespace API.Controllers
     public class TablesController(ISender mediator) : ControllerBase
     {
         [HttpGet]
+        [Authorize(Roles = "Admin, Awaiter")]
         public async Task<IActionResult> GetTables()
         {
             var query = new GetTablesQuery();
@@ -23,6 +24,7 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateTable([FromBody] CreateTableRequest request)
         {
             try
@@ -38,6 +40,7 @@ namespace API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin, Awaiter")]
         public async Task<IActionResult> UpdateTable(Guid id, [FromBody] UpdateTableRequest request)
         {
             try
@@ -53,6 +56,7 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}/qr")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetTableQrCode(Guid id)
         {
             try

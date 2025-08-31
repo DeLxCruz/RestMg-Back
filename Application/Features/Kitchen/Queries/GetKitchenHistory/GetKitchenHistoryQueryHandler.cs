@@ -10,7 +10,9 @@ namespace Application.Features.Kitchen.Queries.GetKitchenHistory
         public async Task<KitchenHistoryReportDto> Handle(GetKitchenHistoryQuery request, CancellationToken ct)
         {
             var restaurantId = user.RestaurantId ?? throw new UnauthorizedAccessException();
-            var today = DateTime.UtcNow.Date;
+            var colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("SA Western Standard Time");
+            var colombiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, colombiaZone);
+            var today = colombiaTime.Date;
             var tomorrow = today.AddDays(1);
 
             var ordersToday = await db.Orders

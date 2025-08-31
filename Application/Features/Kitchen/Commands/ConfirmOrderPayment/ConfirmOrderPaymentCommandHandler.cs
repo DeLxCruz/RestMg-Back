@@ -1,5 +1,4 @@
 using Application.Common.Interfaces;
-using Application.Common.Notifications;
 using Application.Features.Kitchen.Notifications;
 using Domain.Enums;
 using MediatR;
@@ -29,10 +28,10 @@ namespace Application.Features.Kitchen.Commands.ConfirmOrderPayment
 
             // Notificar a la cocina que tiene una nueva comanda
             var itemsDto = order.Items.Select(oi => new OrderItemNotificationDto(oi.MenuItem.Name, oi.Quantity)).ToList();
-            await publisher.Publish(new NewOrderReceivedNotification(restaurantId, order.Id, order.Table.Code, itemsDto, order.CreatedAt), ct);
+            await publisher.Publish(new NewOrderForKitchenNotification(restaurantId, order.Id, order.Table.Code, itemsDto, order.CreatedAt), ct);
 
             // Notificar que el estado de la mesa ahora es (o sigue siendo) ocupado.
-            await publisher.Publish(new TableStateChangedNotification(restaurantId, order.TableId, order.Table.Status.ToString()), ct);
+            await publisher.Publish(new Application.Common.Notifications.TableStateChangedNotification(restaurantId, order.TableId, order.Table.Status.ToString()), ct);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace Application.Features.Kitchen.Queries.GetKitchenOrders
     {
         public async Task<List<KitchenOrderDto>> Handle(GetKitchenOrdersQuery request, CancellationToken ct)
         {
-            var restaurantId = user.RestaurantId ?? throw new System.UnauthorizedAccessException();
+            var restaurantId = user.RestaurantId ?? throw new UnauthorizedAccessException();
 
             var query = db.Orders
                 .AsNoTracking()
@@ -44,7 +44,8 @@ namespace Application.Features.Kitchen.Queries.GetKitchenOrders
                     o.Table.Code,
                     o.Status,
                     o.CreatedAt,
-                    o.Items.Select(oi => new KitchenOrderItemDto(oi.MenuItem.Name, oi.Quantity)).ToList()
+                    o.Items.Select(oi => new KitchenOrderItemDto(oi.MenuItem.Name, oi.Quantity)).ToList(),
+                    o.Items.Sum(oi => oi.MenuItem.Price * oi.Quantity)
                 ))
                 .ToListAsync(ct);
 

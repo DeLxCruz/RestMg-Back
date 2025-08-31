@@ -41,7 +41,7 @@ namespace Infrastructure
                 options.AddPolicy("CorsPolicy", builder =>
                 {
                     var clientUrl = configuration["ClientAppSettings:ClientUrl"]
-                        ?? throw new InvalidOperationException("ClientAppSettings:ClientUrl no está configurado.");
+                        ?? "http://localhost:4321";
 
                     builder.WithOrigins(clientUrl)
                            .AllowAnyMethod()
@@ -76,7 +76,7 @@ namespace Infrastructure
                             var accessToken = context.Request.Query["access_token"];
                             var path = context.HttpContext.Request.Path;
                             if (!string.IsNullOrEmpty(accessToken) &&
-                                (path.StartsWithSegments("/kitchenHub")))
+                                (path.StartsWithSegments("/kitchenHub") || path.StartsWithSegments("/notificationsHub")))
                             {
                                 context.Token = accessToken;
                             }
@@ -112,13 +112,13 @@ namespace Infrastructure
             // Registrar el generador de códigos QR
             services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
 
-            #if DEBUG
+#if DEBUG
             services.AddHttpClient("default")
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
                     ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
                 });
-            #endif
+#endif
 
             return services;
         }

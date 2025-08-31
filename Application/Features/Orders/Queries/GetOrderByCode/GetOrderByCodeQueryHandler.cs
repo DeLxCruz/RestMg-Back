@@ -11,11 +11,13 @@ namespace Application.Features.Orders.Queries.GetOrderByCode
         {
             var order = await db.Orders
                 .AsNoTracking()
+                .Include(o => o.Table)
                 .Include(o => o.Items)
                 .ThenInclude(oi => oi.MenuItem) // Para obtener el nombre del plato
                 .Where(o => o.RestaurantId == request.RestaurantId && o.OrderCode == request.OrderCode)
                 .Select(o => new OrderDetailDto(
                     o.Id,
+                    o.Table.Code,
                     o.OrderCode,
                     o.Status.ToString(),
                     o.Total,

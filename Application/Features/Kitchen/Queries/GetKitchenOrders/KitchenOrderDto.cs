@@ -8,6 +8,7 @@ namespace Application.Features.Kitchen.Queries.GetKitchenOrders
         string TableCode,
         OrderStatus Status,
         DateTime CreatedAt,
-        List<KitchenOrderItemDto> Items
+        List<KitchenOrderItemDto> Items,
+        decimal TotalPrice
     );
 }
