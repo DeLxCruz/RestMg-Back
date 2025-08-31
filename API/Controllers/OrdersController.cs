@@ -30,7 +30,6 @@ namespace API.Controllers
             }
         }
 
-        [Authorize]
         [HttpGet("{code}")]
         public async Task<IActionResult> GetOrderByCode([FromQuery] Guid restaurantId, string code)
         {
