@@ -29,6 +29,23 @@ namespace API.Controllers
             }
         }
 
+        [HttpPost("banner")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> UploadBanner(IFormFile file)
+        {
+            try
+            {
+                var command = new UploadLogoCommand(file);
+                var bannerUrl = await mediator.Send(command);
+                return Ok(new { url = bannerUrl });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("restaurant/{restaurantId}/logo")]
         [ProducesResponseType(typeof(string), 200)]
         [ProducesResponseType(400)]

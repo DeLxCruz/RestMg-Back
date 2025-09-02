@@ -15,7 +15,7 @@ namespace Application.Features.Restaurants.Queries.GetMyRestaurant
             var restaurant = await dbContext.Restaurants
                 .AsNoTracking()
                 .Where(r => r.Id == restaurantId)
-                .Select(r => new MyRestaurantDto(r.Id, r.Name, r.BrandingColor, r.LogoUrl, r.Subdomain))
+                .Select(r => new MyRestaurantDto(r.Id, r.Name, r.BrandingColor, r.LogoUrl, r.BannerUrl, r.Subdomain))
                 .FirstOrDefaultAsync(ct);
 
             return restaurant ?? throw new Exception("Restaurante no encontrado.");

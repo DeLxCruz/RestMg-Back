@@ -6,6 +6,7 @@ namespace Application.Features.Restaurants.Commands.UpdateMyRestaurant
         string Name,
         string? BrandingColor,
         string? LogoUrl,
+        string? BannerUrl,
         string? ClientUrl,
         string? Subdomain
     ) : IRequest;

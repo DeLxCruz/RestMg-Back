@@ -7,6 +7,7 @@ namespace Domain.Models
         public String? Subdomain { get; set; }
         public string? BrandingColor { get; set; }
         public string? LogoUrl { get; set; }
+        public string? BannerUrl { get; set; }
         public string? ClientUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

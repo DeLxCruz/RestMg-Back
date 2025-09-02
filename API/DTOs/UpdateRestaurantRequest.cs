@@ -4,6 +4,7 @@ namespace API.DTOs
         string Name,
         string? BrandingColor,
         string? LogoUrl,
+        string? BannerUrl,
         string? ClientUrl,
         string? Subdomain
     );

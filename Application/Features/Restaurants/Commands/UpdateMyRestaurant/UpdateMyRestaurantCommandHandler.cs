@@ -41,6 +41,7 @@ namespace Application.Features.Restaurants.Commands.UpdateMyRestaurant
             restaurant.Name = command.Name;
             restaurant.BrandingColor = command.BrandingColor;
             restaurant.LogoUrl = command.LogoUrl;
+            restaurant.BannerUrl = command.BannerUrl;
             restaurant.ClientUrl = command.ClientUrl;
 
             await dbContext.SaveChangesAsync(ct);

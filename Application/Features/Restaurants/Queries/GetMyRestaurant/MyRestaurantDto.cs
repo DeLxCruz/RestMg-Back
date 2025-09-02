@@ -5,6 +5,7 @@ namespace Application.Features.Restaurants.Queries.GetMyRestaurant
         string Name,
         string? BrandingColor,
         string? LogoUrl,
+        string? BannerUrl,
         string? Subdomain
     );
 }

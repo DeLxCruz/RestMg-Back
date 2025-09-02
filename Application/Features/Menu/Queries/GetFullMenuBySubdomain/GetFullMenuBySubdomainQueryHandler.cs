@@ -42,6 +42,10 @@ namespace Application.Features.Menu.Queries.GetFullMenuBySubdomain
             return new MenuWithRestaurantDto
             {
                 RestaurantId = restaurant.Id,
+                RestaurantName = restaurant.Name,
+                LogoUrl = restaurant.LogoUrl,
+                BannerUrl = restaurant.BannerUrl,
+                BrandingColor = restaurant.BrandingColor,
                 Categories = categories
             };
         }
