@@ -19,8 +19,15 @@ namespace Application.Features.Kitchen.Commands.StartOrder
             order.Status = OrderStatus.InPreparation;
             await db.SaveChangesAsync(ct);
 
+            Console.WriteLine($"[StartOrderCommandHandler] ===== Publicando notificación de cambio de estado =====");
+            Console.WriteLine($"[StartOrderCommandHandler] OrderId: {order.Id}");
+            Console.WriteLine($"[StartOrderCommandHandler] RestaurantId: {restaurantId}");
+            Console.WriteLine($"[StartOrderCommandHandler] NewStatus: {order.Status}");
+            Console.WriteLine($"[StartOrderCommandHandler] Publicando OrderStatusChangedNotification...");
+
             // Publicar notificación
             await publisher.Publish(new OrderStatusChangedNotification(restaurantId, order.Id, order.Status.ToString()), ct);
+            Console.WriteLine($"[StartOrderCommandHandler] ✅ Notificación publicada exitosamente");
         }
     }
 }

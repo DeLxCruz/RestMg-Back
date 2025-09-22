@@ -47,7 +47,18 @@ namespace Application.Features.MenuItems.Commands.UpdateMenuItem
             // 4. Publicar la notificación si es necesario
             if (availabilityChanged)
             {
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] ===== Publicando notificación de disponibilidad =====");
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] MenuItemId: {item.Id}");
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] RestaurantId: {restaurantId}");
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] IsAvailable: {item.IsAvailable}");
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] Publicando MenuItemAvailabilityNotification...");
+                
                 await publisher.Publish(new MenuItemAvailabilityNotification(restaurantId, item.Id, item.IsAvailable), ct);
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] ✅ Notificación publicada exitosamente");
+            }
+            else
+            {
+                Console.WriteLine($"[UpdateMenuItemCommandHandler] Disponibilidad no cambió, no se envía notificación");
             }
         }
     }

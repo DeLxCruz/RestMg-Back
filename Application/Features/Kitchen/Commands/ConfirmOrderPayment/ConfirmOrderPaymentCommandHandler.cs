@@ -26,12 +26,20 @@ namespace Application.Features.Kitchen.Commands.ConfirmOrderPayment
             order.Status = OrderStatus.Pending;
             await db.SaveChangesAsync(ct);
 
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] ===== Publicando notificaciones =====");
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] OrderId: {order.Id}");
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] RestaurantId: {restaurantId}");
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] TableCode: {order.Table.Code}");
+
             // Notificar a la cocina que tiene una nueva comanda
             var itemsDto = order.Items.Select(oi => new OrderItemNotificationDto(oi.MenuItem.Name, oi.Quantity)).ToList();
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] Publicando NewOrderForKitchenNotification...");
             await publisher.Publish(new NewOrderForKitchenNotification(restaurantId, order.Id, order.Table.Code, itemsDto, order.CreatedAt), ct);
 
             // Notificar que el estado de la mesa ahora es (o sigue siendo) ocupado.
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] Publicando TableStateChangedNotification...");
             await publisher.Publish(new Application.Common.Notifications.TableStateChangedNotification(restaurantId, order.TableId, order.Table.Status.ToString()), ct);
+            Console.WriteLine($"[ConfirmOrderPaymentCommandHandler] ✅ Notificaciones publicadas exitosamente");
         }
     }
 }

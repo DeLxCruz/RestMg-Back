@@ -22,10 +22,13 @@ builder.Services
     .AddApplicationServices()
     .AddInfrastructureServices(builder.Configuration);
 
+// -- Registrar handlers de SignalR de la capa API --
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(System.Reflection.Assembly.GetExecutingAssembly()));
+
 // -- Servicios propios de la capa de API --
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<INotificationsHub, NotificationsHubService>();
 
 // -- Hubs --
 builder.Services.AddSignalR();

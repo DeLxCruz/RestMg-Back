@@ -17,11 +17,17 @@ namespace Application.Features.Kitchen.Commands.MarkOrderReady
             if (order.Status != OrderStatus.InPreparation) throw new InvalidOperationException("Solo se puede marcar como listo un pedido que está en preparación.");
 
             order.Status = OrderStatus.Ready;
-
             await db.SaveChangesAsync(ct);
+
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] ===== Publicando notificación de cambio de estado =====");
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] OrderId: {order.Id}");
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] RestaurantId: {restaurantId}");
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] NewStatus: {order.Status}");
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] Publicando OrderStatusChangedNotification...");
 
             // Publicar notificación
             await publisher.Publish(new OrderStatusChangedNotification(restaurantId, order.Id, order.Status.ToString()), ct);
+            Console.WriteLine($"[MarkOrderReadyCommandHandler] ✅ Notificación publicada exitosamente");
         }
     }
 }

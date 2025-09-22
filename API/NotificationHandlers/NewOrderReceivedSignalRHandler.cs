@@ -11,12 +11,24 @@ namespace API.NotificationHandlers
     {
         private readonly IHubContext<NotificationsHub> _hubContext = hubContext;
 
-        public Task Handle(NewOrderReceivedNotification notification, CancellationToken ct)
+        public async Task Handle(NewOrderReceivedNotification notification, CancellationToken ct)
         {
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] ===== Enviando notificación de nueva orden =====");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] OrderId: {notification.OrderId}");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] RestaurantId: {notification.RestaurantId}");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] TableCode: {notification.TableCode}");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] OrderCode: {notification.OrderCode}");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] Total: ${notification.Total}");
+            
             var groupName = $"restaurant-{notification.RestaurantId}";
-            // Envía un mensaje llamado "NewOrderForApproval" a los meseros y admins de ese restaurante
-            return _hubContext.Clients.Group(groupName)
-                .SendAsync("NewOrderForApproval", notification, ct);
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] Enviando a grupo: {groupName}");
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] Método SignalR: NewOrderReceived");
+            
+            // Envía un mensaje llamado "NewOrderReceived" a los meseros y admins de ese restaurante
+            await _hubContext.Clients.Group(groupName)
+                .SendAsync("NewOrderReceived", notification, ct);
+                
+            Console.WriteLine($"[NewOrderReceivedSignalRHandler] ✅ Notificación enviada exitosamente");
         }
     }
 }

@@ -10,11 +10,21 @@ namespace API.NotificationHandlers
     {
         private readonly IHubContext<KitchenHub> _hubContext = hubContext;
 
-        public Task Handle(TableStateChangedNotification notification, CancellationToken cancellationToken)
+        public async Task Handle(TableStateChangedNotification notification, CancellationToken cancellationToken)
         {
+            Console.WriteLine($"[TableStateChangedSignalRHandler] ===== Enviando notificación de cambio de estado de mesa =====");
+            Console.WriteLine($"[TableStateChangedSignalRHandler] TableId: {notification.TableId}");
+            Console.WriteLine($"[TableStateChangedSignalRHandler] RestaurantId: {notification.RestaurantId}");
+            Console.WriteLine($"[TableStateChangedSignalRHandler] NewState: {notification.NewState}");
+            
             var groupName = $"restaurant-{notification.RestaurantId}";
-            return _hubContext.Clients.Group(groupName)
+            Console.WriteLine($"[TableStateChangedSignalRHandler] Enviando a grupo: {groupName}");
+            Console.WriteLine($"[TableStateChangedSignalRHandler] Método SignalR: TableStateUpdated");
+            
+            await _hubContext.Clients.Group(groupName)
                 .SendAsync("TableStateUpdated", notification.TableId, notification.NewState, cancellationToken);
+                
+            Console.WriteLine($"[TableStateChangedSignalRHandler] ✅ Notificación enviada exitosamente");
         }
     }
 }
